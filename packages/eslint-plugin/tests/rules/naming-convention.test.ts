@@ -214,7 +214,9 @@ function createInvalidTestCases(
             ...(selector !== 'default' &&
             selector !== 'variableLike' &&
             selector !== 'memberLike' &&
-            selector !== 'typeLike'
+            selector !== 'typeLike' &&
+            selector !== 'property' &&
+            selector !== 'method'
               ? {
                   data: {
                     type: selectorTypeToMessageString(selector),
@@ -410,6 +412,17 @@ const cases: Cases = [
       selector: 'variable',
     },
   },
+  {
+    code: [
+      'const {%} = {ignore: 1}; const ignoredDueToModifiers = 1;',
+      'const {ignore: %} = {ignore: 1}; const ignoredDueToModifiers = 1;',
+      'const {% = 2} = {ignore: 1}; const ignoredDueToModifiers = 1;',
+    ],
+    options: {
+      selector: 'variable',
+      modifiers: ['destructured'],
+    },
+  },
   // #endregion variable
 
   // #region function
@@ -444,12 +457,6 @@ const cases: Cases = [
   // #region property
   {
     code: [
-      'const ignored = { % };',
-      'const ignored = { "%": 1 };',
-      'interface Ignored { % }',
-      'interface Ignored { "%": string }',
-      'type Ignored = { % }',
-      'type Ignored = { "%": string }',
       'class Ignored { private % }',
       'class Ignored { private "%" = 1 }',
       'class Ignored { private readonly % = 1 }',
@@ -459,7 +466,7 @@ const cases: Cases = [
       'class Ignored { declare % }',
     ],
     options: {
-      selector: 'property',
+      selector: 'classProperty',
     },
   },
   {
@@ -467,8 +474,25 @@ const cases: Cases = [
       'class Ignored { abstract private static readonly % = 1; ignoredDueToModifiers = 1; }',
     ],
     options: {
-      selector: 'property',
+      selector: 'classProperty',
       modifiers: ['static', 'readonly'],
+    },
+  },
+  {
+    code: ['const ignored = { % };', 'const ignored = { "%": 1 };'],
+    options: {
+      selector: 'objectLiteralProperty',
+    },
+  },
+  {
+    code: [
+      'interface Ignored { % }',
+      'interface Ignored { "%": string }',
+      'type Ignored = { % }',
+      'type Ignored = { "%": string }',
+    ],
+    options: {
+      selector: 'typeProperty',
     },
   },
   // #endregion property
@@ -496,13 +520,6 @@ const cases: Cases = [
   // #region method
   {
     code: [
-      'const ignored = { %() {} };',
-      'const ignored = { "%"() {} };',
-      'const ignored = { %: () => {} };',
-      'interface Ignored { %(): string }',
-      'interface Ignored { "%"(): string }',
-      'type Ignored = { %(): string }',
-      'type Ignored = { "%"(): string }',
       'class Ignored { private %() {} }',
       'class Ignored { private "%"() {} }',
       'class Ignored { private readonly %() {} }',
@@ -513,7 +530,7 @@ const cases: Cases = [
       'class Ignored { declare %() }',
     ],
     options: {
-      selector: 'method',
+      selector: 'classMethod',
     },
   },
   {
@@ -521,8 +538,29 @@ const cases: Cases = [
       'class Ignored { abstract private static %() {}; ignoredDueToModifiers() {}; }',
     ],
     options: {
-      selector: 'method',
+      selector: 'classMethod',
       modifiers: ['abstract', 'static'],
+    },
+  },
+  {
+    code: [
+      'const ignored = { %() {} };',
+      'const ignored = { "%"() {} };',
+      'const ignored = { %: () => {} };',
+    ],
+    options: {
+      selector: 'objectLiteralMethod',
+    },
+  },
+  {
+    code: [
+      'interface Ignored { %(): string }',
+      'interface Ignored { "%"(): string }',
+      'type Ignored = { %(): string }',
+      'type Ignored = { "%"(): string }',
+    ],
+    options: {
+      selector: 'typeMethod',
     },
   },
   // #endregion method
@@ -914,10 +952,146 @@ ruleTester.run('naming-convention', rule, {
 
         export const { OtherConstant: otherConstant } = SomeClass;
       `,
-      parserOptions,
       options: [
         { selector: 'property', format: ['PascalCase'] },
         { selector: 'variable', format: ['camelCase'] },
+      ],
+    },
+    {
+      code: `
+        const camelCaseVar = 1;
+        enum camelCaseEnum {}
+        class camelCaseClass {}
+        function camelCaseFunction() {}
+        interface camelCaseInterface {}
+        type camelCaseType = {};
+
+        export const PascalCaseVar = 1;
+        export enum PascalCaseEnum {}
+        export class PascalCaseClass {}
+        export function PascalCaseFunction() {}
+        export interface PascalCaseInterface {}
+        export type PascalCaseType = {};
+      `,
+      options: [
+        { selector: 'default', format: ['camelCase'] },
+        {
+          selector: 'variable',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'function',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'class',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'interface',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'typeAlias',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'enum',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+      ],
+    },
+    {
+      code: `
+        const camelCaseVar = 1;
+        enum camelCaseEnum {}
+        class camelCaseClass {}
+        function camelCaseFunction() {}
+        interface camelCaseInterface {}
+        type camelCaseType = {};
+
+        const PascalCaseVar = 1;
+        enum PascalCaseEnum {}
+        class PascalCaseClass {}
+        function PascalCaseFunction() {}
+        interface PascalCaseInterface {}
+        type PascalCaseType = {};
+
+        export {
+          PascalCaseVar,
+          PascalCaseEnum,
+          PascalCaseClass,
+          PascalCaseFunction,
+          PascalCaseInterface,
+          PascalCaseType,
+        };
+      `,
+      options: [
+        { selector: 'default', format: ['camelCase'] },
+        {
+          selector: 'variable',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'function',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'class',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'interface',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'typeAlias',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'enum',
+          format: ['PascalCase'],
+          modifiers: ['exported'],
+        },
+      ],
+    },
+    {
+      code: `
+        {
+          const camelCaseVar = 1;
+          function camelCaseFunction() {}
+          declare function camelCaseDeclaredFunction() {
+          };
+        }
+
+        const PascalCaseVar = 1;
+        function PascalCaseFunction() {}
+        declare function PascalCaseDeclaredFunction() {
+        };
+      `,
+      options: [
+        { selector: 'default', format: ['camelCase'] },
+        {
+          selector: 'variable',
+          format: ['PascalCase'],
+          modifiers: ['global'],
+        },
+        {
+          selector: 'function',
+          format: ['PascalCase'],
+          modifiers: ['global'],
+        },
       ],
     },
   ],
@@ -1239,8 +1413,7 @@ ruleTester.run('naming-convention', rule, {
           line: 3,
           messageId: 'doesNotMatchFormat',
           data: {
-            // eslint-disable-next-line @typescript-eslint/internal/prefer-ast-types-enum
-            type: 'Property',
+            type: 'Object Literal Property',
             name: 'Property Name',
             formats: 'strictCamelCase',
           },
@@ -1330,6 +1503,128 @@ ruleTester.run('naming-convention', rule, {
           messageId: 'doesNotMatchFormat',
         },
       ],
+    },
+    {
+      code: `
+        export const PascalCaseVar = 1;
+        export enum PascalCaseEnum {}
+        export class PascalCaseClass {}
+        export function PascalCaseFunction() {}
+        export interface PascalCaseInterface {}
+        export type PascalCaseType = {};
+      `,
+      options: [
+        {
+          selector: 'default',
+          format: ['snake_case'],
+        },
+        {
+          selector: 'variable',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'function',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'class',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'interface',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'typeAlias',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'enum',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+      ],
+      errors: Array(6).fill({ messageId: 'doesNotMatchFormat' }),
+    },
+    {
+      code: `
+        const PascalCaseVar = 1;
+        enum PascalCaseEnum {}
+        class PascalCaseClass {}
+        function PascalCaseFunction() {}
+        interface PascalCaseInterface {}
+        type PascalCaseType = {};
+
+        export {
+          PascalCaseVar,
+          PascalCaseEnum,
+          PascalCaseClass,
+          PascalCaseFunction,
+          PascalCaseInterface,
+          PascalCaseType,
+        };
+      `,
+      options: [
+        { selector: 'default', format: ['snake_case'] },
+        {
+          selector: 'variable',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'function',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'class',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'interface',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'typeAlias',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+        {
+          selector: 'enum',
+          format: ['camelCase'],
+          modifiers: ['exported'],
+        },
+      ],
+      errors: Array(6).fill({ messageId: 'doesNotMatchFormat' }),
+    },
+    {
+      code: `
+        const PascalCaseVar = 1;
+        function PascalCaseFunction() {}
+        declare function PascalCaseDeclaredFunction() {
+        };
+      `,
+      options: [
+        { selector: 'default', format: ['snake_case'] },
+        {
+          selector: 'variable',
+          format: ['camelCase'],
+          modifiers: ['global'],
+        },
+        {
+          selector: 'function',
+          format: ['camelCase'],
+          modifiers: ['global'],
+        },
+      ],
+      errors: Array(3).fill({ messageId: 'doesNotMatchFormat' }),
     },
   ],
 });
